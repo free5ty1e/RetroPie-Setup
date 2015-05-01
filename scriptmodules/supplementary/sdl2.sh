@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="sdl2"
 rp_module_desc="SDL (Simple DirectMedia Layer) v2.x"
 rp_module_menus=""
@@ -113,17 +123,16 @@ _EOF_
 
 function install_sdl2() {
     remove_old_sdl2
-    dpkg -i libsdl2_2.0.3_armhf.deb libsdl2-dev_2.0.3_armhf.deb
+    # if the packages don't install completely due to missing dependencies the apt-get -y -f install will correct it
+    if ! dpkg -i libsdl2_2.0.3_armhf.deb libsdl2-dev_2.0.3_armhf.deb; then
+        apt-get -y -f install
+    fi
 }
 
 function install_bin_sdl2() {
     isPlatform "rpi" || fatalError "$mod_id is only available as a binary package for platform rpi"
     wget "$__binary_url/libsdl2-dev_2.0.3_armhf.deb"
     wget "$__binary_url/libsdl2_2.0.3_armhf.deb"
-    remove_old_sdl2
-    # if the packages don't install completely due to missing dependencies the apt-get -y -f install will correct it
-    if ! dpkg -i libsdl2_2.0.3_armhf.deb libsdl2-dev_2.0.3_armhf.deb; then
-        apt-get -y -f install
-    fi
+    install_sdl2
     rm ./*.deb
 }

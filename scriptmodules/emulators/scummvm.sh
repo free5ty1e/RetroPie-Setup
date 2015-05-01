@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="scummvm"
 rp_module_desc="ScummVM"
 rp_module_menus="2+"
@@ -29,7 +39,8 @@ function configure_scummvm() {
     mkRomDir "scummvm"
 
     # Create startup script
-    cat > "$romdir/scummvm/+Launch GUI.sh" << _EOF_
+    rm -f "$romdir/scummvm/+Launch GUI.sh"
+    cat > "$romdir/scummvm/+Start ScummVM.sh" << _EOF_
 #!/bin/bash
 game="\$1"
 [[ "\$game" =~ ^\+ ]] && game=""
@@ -39,8 +50,8 @@ while read line; do
     touch "$romdir/scummvm/\$id.svm"
 done < <($md_inst/bin/scummvm --list-targets | tail -n +3)
 _EOF_
-    chown $user:$user "$romdir/scummvm/+Launch GUI.sh"
-    chmod u+x "$romdir/scummvm/+Launch GUI.sh"
+    chown $user:$user "$romdir/scummvm/+Start ScummVM.sh"
+    chmod u+x "$romdir/scummvm/+Start ScummVM.sh"
 
-    setESSystem "ScummVM" "scummvm" "~/RetroPie/roms/scummvm" ".sh .svm" "$rootdir/supplementary/runcommand/runcommand.sh 1 \"$romdir/scummvm/+Launch\ GUI.sh %BASENAME%\" \"$md_id\"" "pc" "scummvm"
+    addSystem 1 "$md_id" "scummvm" "$romdir/scummvm/+Start\ ScummVM.sh %BASENAME%" "ScummVM" ".sh .svm"
 }

@@ -1,35 +1,18 @@
 #!/bin/bash
 
-#
-#  (c) Copyright 2012-2014  Florian Müller (contact@petrockblock.com)
-#
-#  RetroPie-Setup homepage: https://github.com/petrockblog/RetroPie-Setup
-#
-#  Permission to use, copy, modify and distribute this work in both binary and
-#  source form, for non-commercial purposes, is hereby granted without fee,
-#  providing that this license information and copyright notice appear with
-#  all copies and any derived work.
-#
-#  This software is provided 'as-is', without any express or implied
-#  warranty. In no event shall the authors be held liable for any damages
-#  arising from the use of this software.
-#
-#  RetroPie-Setup is freeware for PERSONAL USE only. Commercial users should
-#  seek permission of the copyright holders first. Commercial use includes
-#  charging money for RetroPie-Setup or software derived from RetroPie-Setup.
-#
-#  The copyright holders request that bug fixes and improvements to the code
-#  should be forwarded to them so everyone can benefit from the modifications
-#  in future versions.
-#
-#  Many, many thanks go to all people that provide the individual packages!!!
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
 #
 
 function printMsgs() {
     local type="$1"
     shift
     for msg in "$@"; do
-        [[ "$type" == "dialog" ]] && dialog --backtitle "$__backtitle" --msgbox "$msg" 20 60
+        [[ "$type" == "dialog" ]] && dialog --backtitle "$__backtitle" --msgbox "$msg" 20 60 >/dev/tty
         [[ "$type" == "console" ]] && echo "$msg"
         [[ "$type" == "heading" ]] && echo -e "\n= = = = = = = = = = = = = = = = = = = = =\n$msg\n= = = = = = = = = = = = = = = = = = = = =\n"
     done
@@ -80,7 +63,7 @@ function isPlatform() {
 
 function addLineToFile() {
     if [[ -f "$2" ]]; then
-        cp "$2" "$2.old"
+        cp -p "$2" "$2.old"
     fi
     sed -i -e '$a\' "$2"
     echo "$1" >> "$2"
@@ -111,7 +94,7 @@ function iniProcess() {
     local delim_strip=${delim// /}
     # if the stripped delimiter is empty - such as in the case of a space, just use the delimiter instead
     [[ -z "$delim_strip" ]] && delim_strip="$delim"
-    local match_re="[\s#]*$key\s*$delim_strip.*$"
+    local match_re="^[[:space:]#]*$key[[:space:]]*$delim_strip.*$"
 
     local match
     if [[ -f "$file" ]]; then
@@ -120,7 +103,13 @@ function iniProcess() {
         touch "$file"
     fi
 
+    if [[ "$cmd" == "del" ]]; then
+        [[ -n "$match" ]] && sed -i -e "\|$match|d" "$file"
+        return 0
+    fi
+
     [[ "$cmd" == "unset" ]] && key="# $key"
+
     local replace="$key$delim$quote$value$quote"
     echo "Setting $replace in $file"
     if [[ -z "$match" ]]; then
@@ -140,6 +129,30 @@ function iniUnset() {
 # arg 1: key, arg 2: value, arg 3: file (optional - uses file from iniConfig if not used)
 function iniSet() {
     iniProcess "set" "$1" "$2" "$3"
+}
+
+# arg 1: key, arg 2: value, arg 3: file (optional - uses file from iniConfig if not used)
+function iniDel() {
+    iniProcess "del" "$1" "$2" "$3"
+}
+
+# arg 1: key, arg 2: file (optional - uses file from iniConfig if not used)
+# value ends up in ini_value variable
+function iniGet() {
+    local key="$1"
+    local file="$2"
+    [[ -z "$file" ]] && file="$__ini_cfg_file"
+    if [[ ! -f "$file" ]]; then
+        ini_value=""
+        return 1
+    fi
+    local delim="$__ini_cfg_delim"
+    local quote="$__ini_cfg_quote"
+    # we strip the delimiter of spaces, so we can "fussy" match existing entries that have the wrong spacing
+    local delim_strip=${delim// /}
+    # if the stripped delimiter is empty - such as in the case of a space, just use the delimiter instead
+    [[ -z "$delim_strip" ]] && delim_strip="$delim"
+    ini_value=$(sed -rn "s/^[[:space:]]*$key[[:space:]]*$delim_strip[[:space:]]*$quote(.+)$quote.*/\1/p" $file)
 }
 
 function hasPackage() {
@@ -174,10 +187,11 @@ function getDepends() {
     if [[ ${#packages[@]} -ne 0 ]]; then
         echo "Did not find needed package(s): ${packages[@]}. I am trying to install them now."
 
-        # workaround to force installation of our fixed libsdl1.2 for rpi
+        # workaround to force installation of our fixed libsdl1.2 and custom compiled libsdl2 for rpi
         if isPlatform "rpi"; then
             for required in ${packages[@]}; do
                 [[ "$required" == "libsdl1.2-dev" ]] && rp_callModule sdl1 install_bin
+                [[ "$required" == "libsdl2-dev" ]] && rp_callModule sdl2 install_bin
             done
         fi
 
@@ -232,7 +246,7 @@ function gitPullOrClone() {
     mkdir -p "$dir"
 
     # to work around a issue with git hanging in a qemu-arm-static chroot we can use a github created archive
-    if [[ $__chroot -eq 1 ]] && [[ "$repo" =~ github ]]; then
+    if [[ $__chroot -eq 1 ]] && [[ "$repo" =~ github ]] && [[ ! "$repo" =~ picodrive ]]; then
         local archive=${repo/.git/}
         archive="${archive/git:/https:}/archive/$branch.tar.gz"
         wget -O- -q "$archive" | tar -xvz --strip-components=1 -C "$dir"
@@ -272,7 +286,10 @@ gcc_version() {
 }
 
 function ensureRootdirExists() {
-    mkdir -p $rootdir
+    mkdir -p "$rootdir"
+    mkUserDir "$datadir"
+    mkUserDir "$configdir"
+    mkUserDir "$configdir/all"
 }
 
 function rmDirExists() {
@@ -288,67 +305,190 @@ function mkUserDir() {
 
 function mkRomDir() {
     mkUserDir "$romdir/$1"
+    if [[ "$1" == "megadrive" ]]; then
+        pushd "$romdir"
+        ln -snf "$1" "genesis"
+        popd
+    fi
 }
 
 function setDispmanx() {
     local mod_id="$1"
     local status="$2"
-    mkdir -p "$configdir/all"
-    iniConfig "=" "" "$configdir/all/dispmanx.cfg"
+    mkUserDir "$configdir/all"
+    iniConfig "=" "\"" "$configdir/all/dispmanx.cfg"
     iniSet $mod_id "$status"
-}
-
-function updateESConfigEdit() {
-    gitPullOrClone "$rootdir/supplementary/ESConfigEdit" git://github.com/petrockblog/ESConfigEdit
 }
 
 function setESSystem() {
     local fullname=$1
     local name=$2
-    local rompath=$3
+    local path=$3
     local extension=$4
     local command=$5
     local platform=$6
     local theme=$7
 
-    if [[ ! -f "$rootdir/supplementary/ESConfigEdit/esconfedit.py" ]]; then
-        updateESConfigEdit
+    local conf="/etc/emulationstation/es_systems.cfg"
+    mkdir -p "/etc/emulationstation"
+    if [[ ! -f "$conf" ]]; then
+        echo "<systemList />" >"$conf"
     fi
 
-    mkdir -p "/etc/emulationstation"
+    cp "$conf" "$conf.bak"
+    if [[ $(xmlstarlet sel -t -v "count(/systemList/system[name='$name'])" "$conf") -eq 0 ]]; then
+        xmlstarlet ed -L -s "/systemList" -t elem -n "system" -v "" \
+            -s "/systemList/system[last()]" -t elem -n "name" -v "$name" \
+            -s "/systemList/system[last()]" -t elem -n "fullname" -v "$fullname" \
+            -s "/systemList/system[last()]" -t elem -n "path" -v "$path" \
+            -s "/systemList/system[last()]" -t elem -n "extension" -v "$extension" \
+            -s "/systemList/system[last()]" -t elem -n "command" -v "$command" \
+            -s "/systemList/system[last()]" -t elem -n "platform" -v "$platform" \
+            -s "/systemList/system[last()]" -t elem -n "theme" -v "$theme" \
+            "$conf"
+    else
+        xmlstarlet ed -L \
+            -u "/systemList/system[name='$name']/fullname" -v "$fullname" \
+            -u "/systemList/system[name='$name']/path" -v "$path" \
+            -u "/systemList/system[name='$name']/extension" -v "$extension" \
+            -u "/systemList/system[name='$name']/command" -v "$command" \
+            -u "/systemList/system[name='$name']/platform" -v "$platform" \
+            -u "/systemList/system[name='$name']/theme" -v "$theme" \
+            "$conf"
+    fi
 
-    $rootdir/supplementary/ESConfigEdit/esconfedit.py --dontstop \
-                                                    -f "$fullname" \
-                                                    -n "$name" \
-                                                    -d "$rompath" \
-                                                    -e "$extension" \
-                                                    -c "$command" \
-                                                    -p "$platform" \
-                                                    -t "$theme" \
-                                                    add \
-                                                    "/etc/emulationstation/es_systems.cfg" \
-                                                    "/etc/emulationstation/es_systems.cfg"
+    sortESSystems "name"
+}
+
+function sortESSystems() {
+    local field="$1"
+    cp "/etc/emulationstation/es_systems.cfg" "/etc/emulationstation/es_systems.cfg.bak"
+    xmlstarlet sel -D -I \
+        -t -m "/" -e "systemList" \
+        -m "//system" -s A:T:U "$1" -c "." \
+        "/etc/emulationstation/es_systems.cfg.bak" >"/etc/emulationstation/es_systems.cfg"
 }
 
 function ensureSystemretroconfig {
-    if [[ ! -d "$configdir/$1" ]]; then
-        mkdir -p "$configdir/$1"
-        echo -e "# All settings made here will override the global settings for the current emulator core\n" >> "$configdir/$1/retroarch.cfg"
-        chown -R $user:$user "$configdir/$1"
+    local system="$1"
+    local shader="$2"
+    local config="$configdir/$system/retroarch.cfg"
+
+    if [[ ! -d "$configdir/$system" ]]; then
+        mkUserDir "$configdir/$system"
+    fi
+
+    if [[ ! -f "$config" ]]; then
+        echo "#include \"$configdir/all/retroarch.cfg\"" >"$config"
+        echo "# All settings made here will override the global settings for the current emulator core" >>"$config"
+        chown $user:$user "$config"
+    fi
+
+    if ! grep -q "#include \"$configdir/all/retroarch.cfg" "$config"; then
+        sed -i "1i#include \"$configdir/all/retroarch.cfg\"" "$config"
+    fi
+
+    iniConfig " = " "" "$config"
+    iniSet "input_remapping_directory" "$configdir/$system/"
+
+    if [[ -n "$shader" ]]; then
+        iniSet "video_shader" "$emudir/retroarch/shader/$shader"
+        iniSet "video_shader_enable" "false"
+        iniSet "video_smooth" "false"
     fi
 }
 
-# make sure we have all the needed modes in /etc/fb.modes - which is currently just the addition of 320x240.
+# add a framebuffer mode to /etc/fb.modes - useful for adding specific resolutions used by emulators so SDL
+# can use them and utilise the rpi hardware scaling
 # without a 320x240 mode in fb.modes many of the emulators that output to framebuffer (stella / snes9x / gngeo)
 # would just show in a small area of the screen
-function ensureFBModes() {
-    if ! grep -q 'mode "320x240"' /etc/fb.modes 2>/dev/null; then
-        cat >> /etc/fb.modes <<_EOF_
-# added by RetroPie-Setup - 320x240 mode for emulators
-mode "320x240"
-    geometry 320 240 640 480 16
+function ensureFBMode() {
+    local res_x="$1"
+    local res_y="$2"
+    local res="${res_x}x${res_y}"
+    sed -i "/$res mode/,/endmode/d" /etc/fb.modes
+
+    cat >> /etc/fb.modes <<_EOF_
+# added by RetroPie-Setup - $res mode for emulators
+mode "$res"
+    geometry $res_x $res_y $res_x $res_y 16
     timings 0 0 0 0 0 0 0
 endmode
 _EOF_
+}
+
+# arg 1: 0 or 1 to make the emulator default, arg 2: module id, arg 3: "system" or "system platform" or "system platform theme", arg 4: commandline, arg 5 (optional) fullname for es config, arg 6: extensions
+function addSystem() {
+    local default="$1"
+    local id="$2"
+    local names=($3)
+    local cmd="$4"
+    local fullname="$5"
+    local exts=($6)
+
+    local system
+    local platform
+    local theme
+
+    if [[ -n "${names[2]}" ]]; then
+        system="${names[0]}"
+        platform="${names[1]}"
+        theme="${names[2]}"
+    elif [[ -n "${names[1]}" ]]; then
+        system="${names[0]}"
+        platform="${names[1]}"
+        theme="$system"
+    else
+        system="${names[0]}"
+        platform="$system"
+        theme="$system"
+    fi
+
+    local conf=""
+    if [[ -f "$configdir/all/platforms.cfg" ]]; then
+        conf="$configdir/all/platforms.cfg"
+    else
+        conf="$scriptdir/supplementary/platforms.cfg"
+    fi
+
+    iniConfig "=" '"' "$conf"
+    iniGet "${system}_fullname"
+    [[ -n "$ini_value" ]] && fullname="$ini_value"
+    iniGet "${system}_exts"
+    [[ -n "$ini_value" ]] && exts+=($ini_value)
+
+    exts="${exts[@]}"
+    # add the extensions again as uppercase
+    exts+=" ${exts^^}"
+
+    # automatically add parameters for libretro modules
+    if [[ "$id" =~ ^lr- ]]; then
+        cmd="$emudir/retroarch/bin/retroarch -L $cmd --config $configdir/$system/retroarch.cfg %ROM%"
+    fi
+
+    setESSystem "$fullname" "$system" "~/RetroPie/roms/$system" "$exts" "$rootdir/supplementary/runcommand/runcommand.sh 0 _SYS_ $system %ROM%" "$platform" "$theme"
+
+    if [[ ! -d "$configdir/$system" ]]; then
+        mkdir "$configdir/$system"
+        chown $user:$user "$configdir/$system"
+    fi
+
+    iniConfig "=" '"' "$configdir/$system/emulators.cfg"
+    iniSet "$id" "$cmd"
+    if [[ "$default" == "1" ]]; then
+        iniSet "default" "$id"
+    fi
+    chown $user:$user "$configdir/$system/emulators.cfg"
+}
+
+function delSystem() {
+    local id="$1"
+    local system="$2"
+    # remove from emulation station
+    xmlstarlet ed -L -P -d "/systemList/system[name='$system']" /etc/emulationstation/es_systems.cfg
+    # remove from apps list for system
+    if [[ -f "$configdir/$system/emulators.cfg" ]]; then
+        iniConfig "=" '"' "$configdir/$system/emulators.cfg"
+        iniDel "$id"
     fi
 }

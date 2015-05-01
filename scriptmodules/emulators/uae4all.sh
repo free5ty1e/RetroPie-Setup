@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="uae4all"
 rp_module_desc="Amiga emulator UAE4All"
 rp_module_menus="2+"
@@ -95,17 +105,17 @@ function configure_uae4all() {
         ln -sf "$biosdir/$rom" "$md_inst/kickstarts/$rom"
     done
 
-    cat > "$md_inst/uae4all.sh" << _EOF_
+    rm -f "$md_inst/uae4all.sh" "$romdir/amiga/Start.txt"
+    cat > "$romdir/amiga/+Start UAE4All.sh" << _EOF_
 #!/bin/bash
 pushd "$md_inst"
 $rootdir/supplementary/runcommand/runcommand.sh 0 ./uae4all "$md_id"
 popd
 _EOF_
-    chmod a+x "$md_inst/uae4all.sh"
+    chmod a+x "$romdir/amiga/+Start UAE4All.sh"
+    chown $user:$user "$romdir/amiga/+Start UAE4All.sh"
+
     setDispmanx "$md_id" 1
 
-    touch "$romdir/amiga/Start.txt"
-    chown $user:$user "$romdir/amiga/Start.txt"
-
-    setESSystem "Amiga" "amiga" "~/RetroPie/roms/amiga" ".txt" "$md_inst/uae4all.sh" "amiga" "amiga"
+    addSystem 1 "$md_id" "amiga" "$romdir/amiga/+Start\ UAE4All.sh" "Amiga" ".sh"
 }

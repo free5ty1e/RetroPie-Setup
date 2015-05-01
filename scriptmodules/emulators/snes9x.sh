@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="snes9x"
 rp_module_desc="SNES emulator SNES9X-RPi"
 rp_module_menus="2+"
@@ -29,9 +39,10 @@ function install_snes9x() {
 }
 
 function configure_snes9x() {
-    mkRomDir "snes-snes9xrpi"
+    mkRomDir "snes"
 
     setDispmanx "$md_id" 1
 
-    setESSystem "Super Nintendo" "snes-snes9xrpi" "~/RetroPie/roms/snes-snes9xrpi" ".smc .sfc .fig .swc .SMC .SFC .FIG .SWC .zip .ZIP" "$rootdir/supplementary/runcommand/runcommand.sh 0 \"$md_inst/snes9x %ROM%\" \"$md_id\"" "snes" "snes"
+    delSystem "$md_id" "snes9x"
+    addSystem 0 "$md_id" "snes" "$md_inst/snes9x %ROM%"
 }

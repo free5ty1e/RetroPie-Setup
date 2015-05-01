@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="sambashares"
 rp_module_desc="Samba ROM Shares"
 rp_module_menus="3+"
@@ -32,6 +42,7 @@ function configure_sambashares() {
 
     set_ensureEntryInSMBConf "roms" "$romdir"
     set_ensureEntryInSMBConf "bios" "$home/RetroPie/BIOS"
+    set_ensureEntryInSMBConf "configs" "$configdir"
 
     rp_callModule resetromdirs configure
 

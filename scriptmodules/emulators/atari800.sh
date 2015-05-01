@@ -1,5 +1,15 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="atari800"
-rp_module_desc="Atari 800 emulator"
+rp_module_desc="Atari 8-bit/800/5200 emulator"
 rp_module_menus="2+"
 
 function depends_atari800() {
@@ -50,14 +60,19 @@ function install_atari800() {
 
 function configure_atari800() {
     mkRomDir "atari800"
+    mkRomDir "atari5200"
 
-    # backup old config and remove
-    if [[ -f "$home/.atari800.cfg" ]]; then
-        cp -v "$home/.atari800.cfg" "$home/.atari800.cfg.bak"
-        rm -f "$home/.atari800.cfg"
+    mkUserDir "$configdir/atari800"
+
+    # move old config if exists to new location
+    if [[ -f "$home/.atari800.cfg" && ! -h "$home/.atari800.cfg" ]]; then
+        mv -v "$home/.atari800.cfg" "$configdir/atari800.cfg"
     fi
+    ln -sf "$configdir/atari800/atari800.cfg" "$home/.atari800.cfg"
+    chown -R $user:$user  "$configdir/atari800"
 
-    setESSystem "Atari 800" "atari800" "~/RetroPie/roms/atari800" ".xex .XEX" "$rootdir/supplementary/runcommand/runcommand.sh 0 \"$md_inst/bin/atari800 %ROM%\" \"$md_id\"" "atari800" "atari800"
+    addSystem 1 "$md_id" "atari800" "$md_inst/bin/atari800 %ROM%"
+    addSystem 1 "$md_id" "atari5200" "$md_inst/bin/atari800 %ROM%"
     
-    __INFMSGS+=("You need to copy the Atari 800 BIOS files (ATARIBAS.ROM, ATARIOSB.ROM and ATARIXL.ROM) to the folder $biosdir and then on first launch configure it to scan that folder for roms (F1 -> Emulator Configuration -> System Rom Settings)")
+    __INFMSGS+=("You need to copy the Atari 800/5200 BIOS files (5200.ROM, ATARIBAS.ROM, ATARIOSB.ROM and ATARIXL.ROM) to the folder $biosdir and then on first launch configure it to scan that folder for roms (F1 -> Emulator Configuration -> System Rom Settings)")
 }

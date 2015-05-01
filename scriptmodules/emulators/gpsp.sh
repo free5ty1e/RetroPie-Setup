@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="gpsp"
 rp_module_desc="GameBoy Advance emulator"
 rp_module_menus="2+"
@@ -32,7 +42,19 @@ function install_gpsp() {
 
 function configure_gpsp() {
     mkRomDir "gba"
-    chown $user:$user -R "$md_inst"
 
-    setESSystem "Game Boy Advance" "gba" "~/RetroPie/roms/gba" ".gba .GBA" "$rootdir/supplementary/runcommand/runcommand.sh 0 \"$md_inst/gpsp %ROM%\" \"$md_id\"" "gba" "gba"
+    mkUserDir "$configdir/gba"
+
+    # symlink the rom so so it can be installed with the other bios files
+    ln -sf "$biosdir/gba_bios.bin" "$md_inst/gba_bios.bin"
+
+    # move old config
+    if [[ -f "gpsp.cfg" && ! -h "gpsp.cfg" ]]; then
+        mv "gpsp.cfg" "$configdir/gba/gpsp.cfg"
+    fi
+
+    ln -sf "$configdir/gba/gpsp.cfg" "$md_inst/gpsp.cfg"
+
+
+    addSystem 0 "$md_id" "gba" "$md_inst/gpsp %ROM%"
 }

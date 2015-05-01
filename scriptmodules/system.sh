@@ -1,28 +1,11 @@
 #!/usr/bin/env bash
 
-#
-#  (c) Copyright 2012-2014  Florian Müller (contact@petrockblock.com)
-#
-#  RetroPie-Setup homepage: https://github.com/petrockblog/RetroPie-Setup
-#
-#  Permission to use, copy, modify and distribute this work in both binary and
-#  source form, for non-commercial purposes, is hereby granted without fee,
-#  providing that this license information and copyright notice appear with
-#  all copies and any derived work.
-#
-#  This software is provided 'as-is', without any express or implied
-#  warranty. In no event shall the authors be held liable for any damages
-#  arising from the use of this software.
-#
-#  RetroPie-Setup is freeware for PERSONAL USE only. Commercial users should
-#  seek permission of the copyright holders first. Commercial use includes
-#  charging money for RetroPie-Setup or software derived from RetroPie-Setup.
-#
-#  The copyright holders request that bug fixes and improvements to the code
-#  should be forwarded to them so everyone can benefit from the modifications
-#  in future versions.
-#
-#  Many, many thanks go to all people that provide the individual packages!!!
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
 #
 
 function setup_env() {
@@ -86,7 +69,7 @@ function platform_rpi1() {
 function platform_rpi2() {
     __default_cflags="-O2 -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard"
     __default_asflags=""
-    __default_makeflags=""
+    __default_makeflags="-j2"
     __default_gcc_version="4.7"
     # there is no support in qemu for cortex-a7 it seems, but it does have cortex-a15 which is architecturally
     # aligned with the a7, and allows the a7 targetted code to be run in a chroot/emulated environment

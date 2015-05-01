@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="dosbox"
 rp_module_desc="DOS emulator"
 rp_module_menus="2+"
@@ -35,11 +45,28 @@ function install_dosbox() {
 function configure_dosbox() {
     mkRomDir "pc"
 
-    cat > "$romdir/pc/Start DOSBox.sh" << _EOF_
+    rm -f "$romdir/pc/Start DOSBox.sh"
+    cat > "$romdir/pc/+Start DOSBox.sh" << _EOF_
 #!/bin/bash
-$rootdir/supplementary/runcommand/runcommand.sh 1 "$md_inst/bin/dosbox -c \"MOUNT C $romdir/pc\"" "$md_id"
+params="\$1"
+if [[ "\$params" =~ \.sh$ ]]; then
+    params="-c \"MOUNT C $romdir/pc\""
+else
+    params+=" -exit"
+fi
+$rootdir/supplementary/runcommand/runcommand.sh 0 "$md_inst/bin/dosbox \$params" "$md_id"
 _EOF_
-    chmod +x "$romdir/pc/Start DOSBox.sh"
+    chmod +x "$romdir/pc/+Start DOSBox.sh"
+    chown $user:$user "$romdir/pc/+Start DOSBox.sh"
+
+    mkUserDir "$configdir/pc/"
+
+    # move any old configs to the new location
+    if [[ -d "$home/.dosbox" && ! -h "$home/.dosbox" ]]; then
+        mv "$home/.dosbox/"* "$configdir/pc/"
+        rmdir "$home/.dosbox"
+    fi
+    ln -snf "$configdir/pc" "$home/.dosbox"
 
     local config_path=$(su "$user" -c "\"$md_inst/bin/dosbox\" -printconf")
     if [[ -f "$config_path" ]]; then
@@ -50,8 +77,11 @@ _EOF_
         iniSet "scaler" "none"
     fi
 
-    configure_dispmanx_off_dosbox
+    # slight hack so that we set dosbox as the default emulator for "+Start DOSBox.sh"
+    iniConfig "=" '"' "$configdir/all/emulators.cfg"
+    iniSet "ab19770b84adcb74b0044f78b79000379" "dosbox"
+    chown $user:$user "$configdir/all/emulators.cfg"
 
-    setESSystem "PC (x86)" "pc" "~/RetroPie/roms/pc" ".sh" "$rootdir/supplementary/runcommand/runcommand.sh 0 \"%ROM%\" \"$md_id\"" "pc" "pc"
+    addSystem 1 "$md_id" "pc" "$romdir/pc/+Start\ DOSBox.sh %ROM%" "" ".sh"
 }
 

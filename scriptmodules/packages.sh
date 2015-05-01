@@ -1,28 +1,11 @@
 #!/usr/bin/env bash
 
-#
-#  (c) Copyright 2012-2014  Florian Müller (contact@petrockblock.com)
-#
-#  RetroPie-Setup homepage: https://github.com/petrockblog/RetroPie-Setup
-#
-#  Permission to use, copy, modify and distribute this work in both binary and
-#  source form, for non-commercial purposes, is hereby granted without fee,
-#  providing that this license information and copyright notice appear with
-#  all copies and any derived work.
-#
-#  This software is provided 'as-is', without any express or implied
-#  warranty. In no event shall the authors be held liable for any damages
-#  arising from the use of this software.
-#
-#  RetroPie-Setup is freeware for PERSONAL USE only. Commercial users should
-#  seek permission of the copyright holders first. Commercial use includes
-#  charging money for RetroPie-Setup or software derived from RetroPie-Setup.
-#
-#  The copyright holders request that bug fixes and improvements to the code
-#  should be forwarded to them so everyone can benefit from the modifications
-#  in future versions.
-#
-#  Many, many thanks go to all people that provide the individual packages!!!
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
 #
 
 __mod_idx=()
@@ -56,9 +39,7 @@ function rp_listFunctions() {
 
     echo -e "Index/ID:                 Description:                                 List of available actions"
     echo "-----------------------------------------------------------------------------------------------------------------------------------"
-    echo ${__mod_id[1]}
-    for (( i = 0; i < ${#__mod_idx[@]}; i++ )); do
-        idx=${__mod_idx[$i]};
+    for idx in ${__mod_idx[@]}; do
         mod_id=${__mod_id[$idx]};
         printf "%d/%-20s: %-42s : " "$idx" "$mod_id" "${__mod_desc[$idx]}"
         for mode in depends sources build install configure remove; do
@@ -87,6 +68,8 @@ function rp_printUsageinfo() {
 function rp_callModule() {
     local req_id="$1"
     local mode="$2"
+    # shift the function parameters left so $@ will contain any additional parameters which we can use in modules
+    shift 2
 
     if [[ -z "$mode" ]]; then
         for mode in depends sources build install configure clean; do
@@ -121,9 +104,6 @@ function rp_callModule() {
     local md_flags="${__mod_flags[$idx]}"
     local md_build="$__builddir/$mod_id"
     local md_inst="$rootdir/$md_type/$mod_id"
-    # shift the function parameters left so $@ will contain any additional parameters which we can use in modules
-    shift 2
-    local md_params=("$@")
 
     # remove source/build files
     if [[ "${mode}" == "clean" ]]; then
@@ -182,16 +162,22 @@ function rp_callModule() {
     local md_ret_errors=()
 
     # print an action and a description
-    printHeading "$action $md_desc"
+    [[ -n "$action" ]] && printHeading "$action '$md_id' : $md_desc"
 
-    # call the function
-    $function
+    # call the function with parameters
+    $function "$@"
 
+    local file
     # some errors were returned. append to global errors and return
     if [[ "${#md_ret_errors}" -eq 0 ]]; then
         # check if any required files are found
-        if [[ -n "$md_ret_require" ]] && [[ ! -f "$md_ret_require" ]]; then
-            md_ret_errors+=("Could not successfully $function $md_desc ($md_ret_require not found).")
+        if [[ -n "$md_ret_require" ]]; then
+            for file in "${md_ret_require[@]}"; do
+                if [[ ! -e "$file" ]]; then
+                    md_ret_errors+=("Could not successfully $function $md_desc ($file not found).")
+                    break
+                fi
+            done
         else
             # check for existance and copy any files/directories returned
             if [[ -n "$md_ret_files" ]]; then
@@ -240,7 +226,7 @@ function rp_installBin() {
 function rp_createBin() {
     printHeading "Creating binary archive for $md_desc"
     local archive="$md_id.tar.gz"
-    local dest="$__tmpdir/archives/$md_type"
+    local dest="$__tmpdir/archives/$__platform/$md_type"
     rm -f "$dest/$archive"
     mkdir -p "$dest"
     tar cvzf "$dest/$archive" -C "$rootdir/$md_type" "$md_id"

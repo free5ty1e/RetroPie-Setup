@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="cpc"
 rp_module_desc="Amstrad CPC emulator"
 rp_module_menus="2+"
@@ -25,5 +35,5 @@ function install_cpc() {
 function configure_cpc() {
     mkRomDir "amstradcpc"
 
-    setESSystem "Amstrad CPC" "amstradcpc" "~/RetroPie/roms/amstradcpc" ".cpc .CPC .dsk .DSK" "$rootdir/supplementary/runcommand/runcommand.sh 0 \"$md_inst/cpc4rpi %ROM%\" \"$md_id\"" "amstradcpc" ""
+    addSystem 1 "$md_id" "amstradcpc" "$md_inst/cpc4rpi %ROM%"
 }

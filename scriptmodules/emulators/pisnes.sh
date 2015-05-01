@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="pisnes"
 rp_module_desc="SNES emulator PiSNES"
 rp_module_menus="2+"
@@ -28,7 +38,10 @@ function install_pisnes() {
 }
 
 function configure_pisnes() {
-    mkRomDir "snes-pisnes"
+    mkRomDir "snes"
 
-    setESSystem "Super Nintendo" "snes-pisnes" "~/RetroPie/roms/snes-pisnes" ".smc .sfc .fig .swc .SMC .SFC .FIG .SWC .zip .ZIP" "$rootdir/supplementary/runcommand/runcommand.sh 0 \"$md_inst/snes9x %ROM%\" \"$md_id\"" "snes" "snes"
+    setDispmanx "$md_id" 1
+
+    delSystem "$md_id" "snes-pisnes"
+    addSystem 0 "$md_id" "snes" "$md_inst/snes9x %ROM%"
 }

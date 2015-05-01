@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="jzintv"
 rp_module_desc="Intellivision emulator"
 rp_module_menus="2+"
@@ -37,7 +47,7 @@ function configure_jzintv() {
 
     setDispmanx "$md_id" 1
 
-    setESSystem "Intellivision" "intellivision" "~/RetroPie/roms/intellivision" ".int .INT .bin .BIN" "$rootdir/supplementary/runcommand/runcommand.sh 0 \"$md_inst/bin/jzintv -p $biosdir -q %ROM%\" \"$md_id\"" "intellivision" ""
+    addSystem 1 "$md_id" "intellivision" "$md_inst/bin/jzintv -p $biosdir -q %ROM%"
 
     __INFMSGS+=("You need to copy Intellivision BIOS files (exec.bin & grom.bin) to the folder $biosdir.")
 }

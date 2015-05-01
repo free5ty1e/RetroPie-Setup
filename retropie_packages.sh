@@ -1,28 +1,11 @@
 #!/usr/bin/env bash
 
-#
-#  (c) Copyright 2012-2014  Florian Müller (contact@petrockblock.com)
-#
-#  RetroPie-Setup homepage: https://github.com/petrockblog/RetroPie-Setup
-#
-#  Permission to use, copy, modify and distribute this work in both binary and
-#  source form, for non-commercial purposes, is hereby granted without fee,
-#  providing that this license information and copyright notice appear with
-#  all copies and any derived work.
-#
-#  This software is provided 'as-is', without any express or implied
-#  warranty. In no event shall the authors be held liable for any damages
-#  arising from the use of this software.
-#
-#  RetroPie-Setup is freeware for PERSONAL USE only. Commercial users should
-#  seek permission of the copyright holders first. Commercial use includes
-#  charging money for RetroPie-Setup or software derived from RetroPie-Setup.
-#
-#  The copyright holders request that bug fixes and improvements to the code
-#  should be forwarded to them so everyone can benefit from the modifications
-#  in future versions.
-#
-#  Many, many thanks go to all people that provide the individual packages!!!
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
 #
 
 # global variables ==========================================================
@@ -34,14 +17,16 @@ user="$SUDO_USER"
 [[ -z "$user" ]] && user=$(id -un)
 
 home="$(eval echo ~$user)"
-biosdir="$home/RetroPie/BIOS"
-romdir="$home/RetroPie/roms"
+datadir="$home/RetroPie"
+biosdir="$datadir/BIOS"
+romdir="$datadir/roms"
 emudir="$rootdir/emulators"
 configdir="$rootdir/configs"
 
 scriptdir=$(dirname "$0")
 scriptdir=$(cd "$scriptdir" && pwd)
 
+__logdir="$scriptdir/logs"
 __tmpdir="$scriptdir/tmp"
 __builddir="$__tmpdir/build"
 __swapdir="$__tmpdir"
@@ -52,26 +37,28 @@ if [[ $(id -u) -ne 0 ]]; then
     exit 1
 fi
 
+__backtitle="PetRockBlock.com - RetroPie Setup. Installation folder: $rootdir for user $user"
+
 source "$scriptdir/scriptmodules/system.sh"
 source "$scriptdir/scriptmodules/helpers.sh"
 source "$scriptdir/scriptmodules/packages.sh"
 
 setup_env
 
-if ! getDepends git dialog python-lxml gcc-$__default_gcc_version g++-$__default_gcc_version build-essential; then
+if ! getDepends git dialog wget gcc-$__default_gcc_version g++-$__default_gcc_version build-essential xmlstarlet; then
     printMsgs "console" "Unable to install packages required by $0" "${md_ret_errors[@]}" >&2
     exit 1
 fi
 
 # set default gcc version
-gcc_version $__default_gcc_version
+gcc_version "$__default_gcc_version"
 
 mkUserDir "$romdir"
 mkUserDir "$biosdir"
 
 rp_registerAllModules
 
-ensureFBModes
+ensureFBMode 320 240
 
 [[ "$1" == "init" ]] && return
 

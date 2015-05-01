@@ -1,14 +1,20 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="retroarch"
 rp_module_desc="RetroArch"
 rp_module_menus="2+"
 
 function depends_retroarch() {
-    getDepends libudev-dev libxkbcommon-dev
-    
-    if ! hasPackage libsdl2-dev && isPlatform "rpi"; then
-        rp_callModule sdl2 install_bin
-    fi
-    
+    getDepends libudev-dev libxkbcommon-dev libsdl2-dev
+
     cat > "/etc/udev/rules.d/99-evdev.rules" << _EOF_
 KERNEL=="event*", NAME="input/%k", MODE="666"
 _EOF_
@@ -17,6 +23,9 @@ _EOF_
 
 function sources_retroarch() {
     gitPullOrClone "$md_build" git://github.com/libretro/RetroArch.git
+    gitPullOrClone "$md_build/overlays" git://github.com/libretro/common-overlays.git
+    gitPullOrClone "$md_build/shader" https://github.com/gizmo98/common-shaders.git
+    sed -i 's| menu_input_search_start|//menu_input_search_start|g' $md_build/menu/menu_entries_cbs_iterate.c
 }
 
 function build_retroarch() {
@@ -30,36 +39,41 @@ function build_retroarch() {
 
 function install_retroarch() {
     make install
-    mkdir -p "$md_inst/shader"
-    cp "$scriptdir/supplementary/RetroArchShader/"* "$md_inst/shader/"
-    chown $user:$user -R "$md_inst/shader"
+    mkdir -p "$md_inst/"{shader,assets,overlays}
+    cp -v -a "$md_build/shader/"* "$md_inst/shader/"
+    cp -v -a "$md_build/overlays/"* "$md_inst/overlays/"
+    chown $user:$user -R "$md_inst/"{shader,assets,overlays}
     md_ret_files=(
         'retroarch.cfg'
         'tools/retroarch-joyconfig'
     )
-    md_ret_require="$md_inst/bin/retroarch"
 }
 
 function configure_retroarch() {
-    if [[ ! -d "$configdir/all/" ]]; then
-        mkdir -p "$configdir/all/"
-    fi
-    cp $scriptdir/supplementary/retroarch-core-options.cfg "$configdir/all/"
+    mkUserDir "$configdir/all"
 
+    local config="$configdir/all/retroarch.cfg"
+    # if the user has an existing config we will not overwrite it, but instead copy the
+    # default configuration to retroarch.cfg.rp-dist so any new options can be manually
+    # copied across as needed without destroying users changes
     if [[ -f "$configdir/all/retroarch.cfg" ]]; then
-        cp "$configdir/all/retroarch.cfg" "$configdir/all/retroarch.cfg.bak"
+        config="$configdir/all/retroarch.cfg.rp-dist"
+        cp -v "$md_inst/retroarch.cfg" "$config"
+    else
+        cp -v "$md_inst/retroarch.cfg" "$config"
     fi
 
-    mkdir -p "$configdir/all/"
-    cp "$md_inst/retroarch.cfg" "$configdir/all/"
-
-    iniConfig " = " "" "$configdir/all/retroarch.cfg"
+    # configure default options
+    iniConfig " = " "" "$config"
     iniSet "system_directory" "$biosdir"
     iniSet "config_save_on_exit" "false"
     iniSet "video_aspect_ratio_auto" "true"
     iniSet "video_smooth" "false"
     iniSet "video_threaded" "true"
+    iniSet "video_font_size" "12"
     iniSet "core_options_path" "$configdir/all/retroarch-core-options.cfg"
+    iniSet "assets_directory" "$md_inst/assets"
+    iniSet "overlay_directory" "$md_inst/overlays"
 
     # enable hotkey ("select" button)
     iniSet "input_enable_hotkey" "nul"
@@ -97,5 +111,5 @@ function configure_retroarch() {
     iniSet "input_autodetect_enable" "true"
     iniSet "joypad_autoconfig_dir" "$md_inst/configs/"
 
-    chown $user:$user -R "$configdir"
+    chown $user:$user "$config"
 }

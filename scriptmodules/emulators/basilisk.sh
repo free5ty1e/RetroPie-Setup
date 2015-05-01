@@ -1,3 +1,13 @@
+#!/usr/bin/env bash
+
+# This file is part of RetroPie.
+# 
+# (c) Copyright 2012-2015  Florian Müller (contact@petrockblock.com)
+# 
+# See the LICENSE.md file at the top-level directory of this distribution and 
+# at https://raw.githubusercontent.com/petrockblog/RetroPie-Setup/master/LICENSE.md.
+#
+
 rp_module_id="basilisk"
 rp_module_desc="Macintosh emulator"
 rp_module_menus="2+"
@@ -27,7 +37,8 @@ function install_basilisk() {
 function configure_basilisk() {
     mkRomDir "macintosh"
     touch "$romdir/macintosh/Start.txt"
+    
+    mkUserDir "$configdir/macintosh"
 
-    setESSystem "Apple Macintosh" "macintosh" "~/RetroPie/roms/macintosh" ".txt" "$rootdir/supplementary/runcommand/runcommand.sh 1 \"$md_inst/bin/BasiliskII --rom $romdir/macintosh/mac.rom --disk $romdir/macintosh/disk.img\" \"$md_id\"" "macintosh"
-
+    addSystem 1 "$md_id" "macintosh" "$md_inst/bin/BasiliskII --rom $romdir/macintosh/mac.rom --disk $romdir/macintosh/disk.img --config $configdir/macintosh/basiliskii.cfg" "Apple Macintosh" ".txt"
 }
